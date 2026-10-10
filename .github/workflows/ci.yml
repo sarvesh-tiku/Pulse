@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: gcc-release,   cc: gcc,   cxx: g++,     sanitizer: "",          build_type: Release }
+          - { name: clang-release, cc: clang, cxx: clang++, sanitizer: "",          build_type: Release }
+          - { name: clang-asan,    cc: clang, cxx: clang++, sanitizer: address,     build_type: RelWithDebInfo }
+          - { name: clang-ubsan,   cc: clang, cxx: clang++, sanitizer: undefined,   build_type: RelWithDebInfo }
+          - { name: clang-tsan,    cc: clang, cxx: clang++, sanitizer: thread,      build_type: RelWithDebInfo }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build clang
+      - name: Configure
+        env: { CC: "${{ matrix.cc }}", CXX: "${{ matrix.cxx }}" }
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DPULSE_WERROR=ON
+          -DPULSE_SANITIZER=${{ matrix.sanitizer }}
+          -DPULSE_BUILD_BENCHMARKS=${{ matrix.sanitizer == '' && 'ON' || 'OFF' }}
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        env:
+          TSAN_OPTIONS: halt_on_error=1
+          ASAN_OPTIONS: detect_leaks=1
+        run: ctest --test-dir build --output-on-failure -j 2
+      - name: Smoke test tools
+        if: matrix.sanitizer == ''
+        run: |
+          ./build/pulse-gen --out /tmp/s.pulse --events 200k --faults drop=1e-3,dup=1e-3,reorder=1e-3,corrupt=1e-4
+          ./build/pulse inspect /tmp/s.pulse
+          ./build/pulse run /tmp/s.pulse --record /tmp/rec.pulse | tee /tmp/run.txt
+          ./build/pulse replay /tmp/rec.pulse | tee /tmp/replay.txt
+          # Deterministic replay: identical digest from the recording.
+          test "$(grep '^digest' /tmp/run.txt | awk '{print $2}')" = "$(grep '^digest' /tmp/replay.txt | awk '{print $2}')"
+      - name: Quick benchmark
+        if: matrix.name == 'gcc-release'
+        run: ./build/benchmarks/pulse-bench --events 1M --repeat 1 --suite books

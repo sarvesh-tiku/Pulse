@@ -1,0 +1,9 @@
+build*/
+cmake-build-*/
+compile_commands.json
+.cache/
+*.pulse
+*.pulse.rewind
+.DS_Store
+.idea/
+.vscode/

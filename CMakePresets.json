@@ -1,0 +1,29 @@
+{
+  "version": 6,
+  "configurePresets": [
+    { "name": "release", "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" } },
+    { "name": "native", "inherits": "release", "binaryDir": "${sourceDir}/build/native",
+      "cacheVariables": { "PULSE_NATIVE": "ON" } },
+    { "name": "debug", "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "PULSE_BUILD_BENCHMARKS": "OFF" } },
+    { "name": "asan", "binaryDir": "${sourceDir}/build/asan",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "PULSE_SANITIZER": "address", "PULSE_BUILD_BENCHMARKS": "OFF" } },
+    { "name": "ubsan", "binaryDir": "${sourceDir}/build/ubsan",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "PULSE_SANITIZER": "undefined", "PULSE_BUILD_BENCHMARKS": "OFF" } },
+    { "name": "tsan", "binaryDir": "${sourceDir}/build/tsan",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "PULSE_SANITIZER": "thread", "PULSE_BUILD_BENCHMARKS": "OFF" } }
+  ],
+  "buildPresets": [
+    { "name": "release", "configurePreset": "release" },
+    { "name": "debug", "configurePreset": "debug" },
+    { "name": "asan", "configurePreset": "asan" },
+    { "name": "ubsan", "configurePreset": "ubsan" },
+    { "name": "tsan", "configurePreset": "tsan" }
+  ],
+  "testPresets": [
+    { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true } },
+    { "name": "asan", "configurePreset": "asan", "output": { "outputOnFailure": true } },
+    { "name": "tsan", "configurePreset": "tsan", "output": { "outputOnFailure": true } }
+  ]
+}
